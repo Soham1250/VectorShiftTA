@@ -42,7 +42,6 @@ const selector = (state) => ({
   onNodesChange: state.onNodesChange,
   onEdgesChange: state.onEdgesChange,
   onConnect: state.onConnect,
-  theme: state.theme,
 });
 
 export const PipelineUI = () => {
@@ -55,8 +54,7 @@ export const PipelineUI = () => {
       addNode,
       onNodesChange,
       onEdgesChange,
-      onConnect,
-      theme,
+      onConnect
     } = useStore(selector, shallow);
 
     const getInitNodeData = (nodeID, type, customNodeData) => {
@@ -287,7 +285,7 @@ export const PipelineUI = () => {
                     panOnDrag={[1, 2]}
                     selectionMode="partial"
                 >
-                    <Background color={theme === 'dark' ? '#262D35' : '#D9D3C5'} gap={gridSize} size={1.5} />
+                    <Background color="#D9D3C5" gap={gridSize} size={1.2} />
                     <Controls className="custom-flow-controls" />
                     <MiniMap className="custom-flow-minimap" />
                 </ReactFlow>
