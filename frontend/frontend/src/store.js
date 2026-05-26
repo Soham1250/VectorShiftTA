@@ -32,6 +32,16 @@ export const useStore = create((set, get) => ({
     nodes: [],
     edges: [],
     customNodes: [],
+    theme: 'dark',
+    toggleTheme: () => {
+      const nextTheme = get().theme === 'dark' ? 'light' : 'dark';
+      if (nextTheme === 'light') {
+        document.body.classList.add('theme-light');
+      } else {
+        document.body.classList.remove('theme-light');
+      }
+      set({ theme: nextTheme });
+    },
     addCustomNode: (nodeSchema) => {
       const newHash = generateHash(nodeSchema.title);
       
