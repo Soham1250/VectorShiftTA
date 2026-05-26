@@ -6,10 +6,11 @@ const selector = (state) => ({
   nodes: state.nodes,
   edges: state.edges,
   deleteSelected: state.deleteSelected,
+  showAlert: state.showAlert,
 });
 
 export const SubmitButton = () => {
-  const { nodes, edges, deleteSelected } = useStore(selector, shallow);
+  const { nodes, edges, deleteSelected, showAlert } = useStore(selector, shallow);
   const [isOpen, setIsOpen] = useState(false);
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -34,7 +35,11 @@ export const SubmitButton = () => {
       setIsOpen(true);
     } catch (error) {
       console.error('Error submitting pipeline:', error);
-      alert(`Error submitting pipeline: Could not connect to backend server at http://localhost:8000/pipelines/parse. Please make sure the FastAPI server is running.`);
+      showAlert(
+        "Submission Error",
+        "Could not connect to the backend server at http://localhost:8000/pipelines/parse. Please make sure the FastAPI server is running.",
+        "error"
+      );
     } finally {
       setLoading(false);
     }

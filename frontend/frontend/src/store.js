@@ -29,36 +29,21 @@ export const getNodeName = (node) => {
 };
 
 export const useStore = create((set, get) => ({
+    theme: localStorage.getItem('theme') || 'light',
+    toggleTheme: () => {
+      const newTheme = get().theme === 'light' ? 'dark' : 'light';
+      localStorage.setItem('theme', newTheme);
+      document.documentElement.setAttribute('data-theme', newTheme);
+      set({ theme: newTheme });
+    },
+    alert: null,
+    showAlert: (title, message, type = 'warning') => set({ alert: { title, message, type } }),
+    hideAlert: () => set({ alert: null }),
+    prompt: null,
+    showPrompt: (title, message, defaultValue, onConfirm, onCancel) => set({ prompt: { title, message, defaultValue, onConfirm, onCancel } }),
+    hidePrompt: () => set({ prompt: null }),
     nodes: [],
     edges: [],
-    customNodes: [],
-    addCustomNode: (nodeSchema) => {
-      const newHash = generateHash(nodeSchema.title);
-      
-      // Prevent duplicate custom node names in toolbar
-      const standardTitles = ['Input', 'LLM', 'Output', 'Text', 'Filter', 'Timer', 'Merge', 'Database', 'Math'];
-      const hasConflictInStandard = standardTitles.some((title) => generateHash(title) === newHash);
-      const hasConflictInCustom = get().customNodes.some((node) => generateHash(node.title) === newHash);
-      
-      if (hasConflictInStandard || hasConflictInCustom) {
-        alert(`Toolbar node creation blocked: A node type with the name "${nodeSchema.title}" (Hash: ${newHash}) already exists.`);
-        return;
-      }
-
-      set({
-          customNodes: [...get().customNodes, nodeSchema]
-      });
-    },
-    deleteCustomNode: (index) => {
-        set({
-            customNodes: get().customNodes.filter((_, i) => i !== index)
-        });
-    },
-    replaceCustomNode: (index, newNodeSchema) => {
-        set({
-            customNodes: get().customNodes.map((node, i) => i === index ? newNodeSchema : node)
-        });
-    },
     deleteSelected: () => {
         const selectedNodeIds = get().nodes.filter((node) => node.selected).map((node) => node.id);
         set({
@@ -102,7 +87,11 @@ export const useStore = create((set, get) => ({
         });
 
         if (hasConflict) {
-          alert(`Node creation blocked: A node with the name "${newName}" (Hash: ${newHash}) already exists on the canvas.`);
+          get().showAlert(
+            "Node Creation Blocked",
+            `A node with the name "${newName}" already exists on the canvas. Please choose a unique name.`,
+            "warning"
+          );
           return;
         }
 
@@ -136,7 +125,11 @@ export const useStore = create((set, get) => ({
         });
 
         if (hasConflict) {
-          alert(`Rename blocked: A node with the name "${fieldValue}" (Hash: ${newHash}) already exists.`);
+          get().showAlert(
+            "Rename Blocked",
+            `A node with the name "${fieldValue}" already exists. Please choose a unique name.`,
+            "warning"
+          );
           return;
         }
       }

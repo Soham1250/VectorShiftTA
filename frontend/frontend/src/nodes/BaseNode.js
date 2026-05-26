@@ -8,7 +8,7 @@ export const BaseNode = ({
   inputs = [],
   outputs = [],
   children,
-  themeColor = '#818cf8', // standard indigo accent
+  themeColor = '#6965db', // standard Excalidraw indigo accent
   className = '',
   style = {},
 }) => {
@@ -18,14 +18,29 @@ export const BaseNode = ({
     return { top: `${((index + 1) * 100) / (total + 1)}%` };
   };
 
+  const getThemeColor = (color) => {
+    switch (color) {
+      case '#10b981': return 'var(--color-green)';
+      case '#8b5cf6': return 'var(--color-purple)';
+      case '#06b6d4': return 'var(--color-cyan)';
+      case '#f59e0b': return 'var(--color-amber)';
+      case '#3b82f6': return 'var(--color-blue)';
+      case '#ec4899': return 'var(--color-pink)';
+      case '#a855f7': return 'var(--color-purple)';
+      default: return color;
+    }
+  };
+
+  const activeColor = getThemeColor(themeColor);
+
   return (
     <div
       className={`custom-flow-node ${className}`}
       style={{
-        borderTop: `3px solid ${themeColor}`,
-        borderLeft: '1px solid var(--rule-dk)',
-        borderRight: '1px solid var(--rule-dk)',
-        borderBottom: '1px solid var(--rule-dk)',
+        borderTop: `4px solid ${activeColor}`,
+        borderLeft: '1.5px solid var(--node-border)',
+        borderRight: '1.5px solid var(--node-border)',
+        borderBottom: '1.5px solid var(--node-border)',
         ...style
       }}
     >
@@ -44,11 +59,11 @@ export const BaseNode = ({
             position={Position.Left}
             id={handleId}
             style={{
-              background: themeColor,
-              borderColor: '#ffffff',
-              borderWidth: '2px',
-              width: '9px',
-              height: '9px',
+              background: activeColor,
+              borderColor: 'var(--node-border)',
+              borderWidth: '1.5px',
+              width: '12px',
+              height: '12px',
               transition: 'all 0.2s ease',
               ...spacingStyle,
               ...customStyle,
@@ -73,11 +88,11 @@ export const BaseNode = ({
             position={Position.Right}
             id={handleId}
             style={{
-              background: themeColor,
-              borderColor: '#ffffff',
-              borderWidth: '2px',
-              width: '9px',
-              height: '9px',
+              background: activeColor,
+              borderColor: 'var(--node-border)',
+              borderWidth: '1.5px',
+              width: '12px',
+              height: '12px',
               transition: 'all 0.2s ease',
               ...spacingStyle,
               ...customStyle,

@@ -3,36 +3,36 @@
 // --------------------------------------------------
 
 import { useState, useRef, useCallback, useEffect } from 'react';
-import ReactFlow, { Controls, Background, MiniMap } from 'reactflow';
+import ReactFlow, { Controls, Background } from 'reactflow';
 import { useStore, generateHash, getNodeName } from './store';
 import { shallow } from 'zustand/shallow';
 import { InputNode } from './nodes/inputNode';
 import { LLMNode } from './nodes/llmNode';
 import { OutputNode } from './nodes/outputNode';
 import { TextNode } from './nodes/textNode';
-import { FilterNode } from './nodes/filterNode';
-import { TimerNode } from './nodes/timerNode';
-import { MergeNode } from './nodes/mergeNode';
-import { DatabaseNode } from './nodes/databaseNode';
-import { MathNode } from './nodes/mathNode';
-import { GenericCustomNode } from './nodes/genericCustomNode';
+import { DelayNode } from './nodes/delayNode';
+import { ConditionalNode } from './nodes/conditionalNode';
+import { SqlQueryNode } from './nodes/sqlQueryNode';
+import { SkipNode } from './nodes/skipNode';
+import { UpdateMemoryNode } from './nodes/updateMemoryNode';
 
 import 'reactflow/dist/style.css';
 
-const gridSize = 20;
+const gridSize = 26;
 const proOptions = { hideAttribution: true };
 const nodeTypes = {
   customInput: InputNode,
   llm: LLMNode,
   customOutput: OutputNode,
   text: TextNode,
-  filter: FilterNode,
-  timer: TimerNode,
-  merge: MergeNode,
-  database: DatabaseNode,
-  math: MathNode,
-  genericCustom: GenericCustomNode,
+  delay: DelayNode,
+  conditional: ConditionalNode,
+  sqlQuery: SqlQueryNode,
+  skip: SkipNode,
+  updateMemory: UpdateMemoryNode,
 };
+
+
 
 const selector = (state) => ({
   nodes: state.nodes,
@@ -42,11 +42,15 @@ const selector = (state) => ({
   onNodesChange: state.onNodesChange,
   onEdgesChange: state.onEdgesChange,
   onConnect: state.onConnect,
+  showPrompt: state.showPrompt,
+  hidePrompt: state.hidePrompt,
+  showAlert: state.showAlert,
 });
 
 export const PipelineUI = () => {
     const reactFlowWrapper = useRef(null);
     const [reactFlowInstance, setReactFlowInstance] = useState(null);
+    const theme = useStore((state) => state.theme);
     const {
       nodes,
       edges,
@@ -54,8 +58,17 @@ export const PipelineUI = () => {
       addNode,
       onNodesChange,
       onEdgesChange,
-      onConnect
+      onConnect,
+      showPrompt,
+      hidePrompt,
+      showAlert
     } = useStore(selector, shallow);
+
+    useEffect(() => {
+      document.documentElement.setAttribute('data-theme', theme);
+    }, [theme]);
+
+    const gridColor = theme === 'light' ? '#e0e0e0' : '#2d2d2d';
 
     const getInitNodeData = (nodeID, type, customNodeData) => {
       let nodeData = { id: nodeID, nodeType: `${type}` };
@@ -70,18 +83,24 @@ export const PipelineUI = () => {
       } else if (type === 'text') {
         nodeData.title = 'Text';
         nodeData.text = '{{input}}';
-      } else if (type === 'filter') {
-        nodeData.title = 'Filter';
-      } else if (type === 'timer') {
-        nodeData.title = 'Timer';
-      } else if (type === 'merge') {
-        nodeData.title = 'Merge';
-      } else if (type === 'database') {
-        nodeData.title = 'Database';
-      } else if (type === 'math') {
-        nodeData.title = 'Math Branch';
-      } else if (type === 'genericCustom' && customNodeData) {
-        nodeData = { ...nodeData, ...customNodeData };
+      } else if (type === 'delay') {
+        nodeData.title = 'Delay';
+        nodeData.duration = 5;
+        nodeData.unit = 'Seconds';
+      } else if (type === 'conditional') {
+        nodeData.title = 'Conditional';
+        nodeData.condition = 'value > 0';
+      } else if (type === 'sqlQuery') {
+        nodeData.title = 'SQL Query';
+        nodeData.database = 'production_db';
+        nodeData.query = 'SELECT * FROM users WHERE active = 1;';
+      } else if (type === 'skip') {
+        nodeData.title = 'Skip';
+        nodeData.condition = 'status === "inactive"';
+      } else if (type === 'updateMemory') {
+        nodeData.title = 'Update Memory';
+        nodeData.memoryKey = 'conversation_history';
+        nodeData.memoryValue = '';
       }
       return nodeData;
     }
@@ -115,54 +134,50 @@ export const PipelineUI = () => {
                   ? nodeID.replace('customOutput-', 'output_') 
                   : (customNodeData?.title || `${type}_${nodeID.split('-')[1]}`));
 
-            let enteredName = "";
-            let isUnique = false;
-
-            // Prompt user until they enter a unique name or cancel drop
-            while (!isUnique) {
-              enteredName = window.prompt(`Enter a unique name for the new ${type} node:`, defaultSuggestedName);
-
-              if (enteredName === null) {
-                return; // User clicked Cancel, terminate drop
-              }
-
+            const handlePromptConfirm = (enteredName) => {
               enteredName = enteredName.trim();
               if (!enteredName) {
-                alert("Node name is mandatory. Please enter a valid name.");
-                continue;
+                showAlert("Validation Error", "Node name is mandatory. Please enter a valid name.", "warning");
+                return;
               }
 
               const newHash = generateHash(enteredName);
               const hasConflict = nodes.some((n) => generateHash(getNodeName(n)) === newHash);
 
               if (hasConflict) {
-                alert(`Naming conflict: A node with the name "${enteredName}" already exists on the canvas. Please choose a unique name.`);
-              } else {
-                isUnique = true;
+                showAlert("Naming Conflict", `A node with the name "${enteredName}" already exists on the canvas. Please choose a unique name.`, "warning");
+                return;
               }
-            }
 
-            // Create initial data and update with custom unique name
-            const initialData = getInitNodeData(nodeID, type, customNodeData);
-            if (type === 'customInput') {
-              initialData.inputName = enteredName;
-            } else if (type === 'customOutput') {
-              initialData.outputName = enteredName;
-            } else {
-              initialData.title = enteredName;
-            }
+              hidePrompt();
+              const initialData = getInitNodeData(nodeID, type, customNodeData);
+              if (type === 'customInput') {
+                initialData.inputName = enteredName;
+              } else if (type === 'customOutput') {
+                initialData.outputName = enteredName;
+              } else {
+                initialData.title = enteredName;
+              }
 
-            const newNode = {
-              id: nodeID,
-              type,
-              position,
-              data: initialData,
+              const newNode = {
+                id: nodeID,
+                type,
+                position,
+                data: initialData,
+              };
+
+              addNode(newNode);
             };
-      
-            addNode(newNode);
+
+            showPrompt(
+              `Create ${type === 'customInput' ? 'Input' : type === 'customOutput' ? 'Output' : type.toUpperCase()} Node`,
+              `Enter a unique name for the new ${type} node:`,
+              defaultSuggestedName,
+              handlePromptConfirm
+            );
           }
         },
-        [reactFlowInstance, getNodeID, addNode, nodes]
+        [reactFlowInstance, getNodeID, addNode, nodes, showAlert, showPrompt, hidePrompt]
     );
 
     // Keyboard listener for Copy (Ctrl+C) and Paste (Ctrl+V)
@@ -197,58 +212,52 @@ export const PipelineUI = () => {
                     const sourceName = getNodeName(sourceNode);
                     const defaultCopyName = `${sourceName}_copy`;
 
-                    let enteredName = "";
-                    let isUnique = false;
-
-                    // Prompt user for a unique name for the pasted node
-                    while (!isUnique) {
-                        enteredName = window.prompt(
-                            `Paste Node: Enter a unique name for the copied ${sourceNode.type} node:`,
-                            defaultCopyName
-                        );
-
-                        if (enteredName === null) {
-                            return; // Cancel paste
-                        }
-
+                    const handlePasteConfirm = (enteredName) => {
                         enteredName = enteredName.trim();
                         if (!enteredName) {
-                            alert("Node name is mandatory. Please enter a valid name.");
-                            continue;
+                            showAlert("Validation Error", "Node name is mandatory. Please enter a valid name.", "warning");
+                            return;
                         }
 
                         const newHash = generateHash(enteredName);
                         const hasConflict = nodes.some((n) => generateHash(getNodeName(n)) === newHash);
 
                         if (hasConflict) {
-                            alert(`Naming conflict: A node with the name "${enteredName}" already exists on the canvas.`);
-                        } else {
-                            isUnique = true;
+                            showAlert("Naming Conflict", `A node with the name "${enteredName}" already exists on the canvas. Please choose a unique name.`, "warning");
+                            return;
                         }
-                    }
 
-                    const newId = getNodeID(sourceNode.type);
-                    const newData = { ...sourceNode.data, id: newId };
-                    
-                    if (sourceNode.type === 'customInput') {
-                        newData.inputName = enteredName;
-                    } else if (sourceNode.type === 'customOutput') {
-                        newData.outputName = enteredName;
-                    } else {
-                        newData.title = enteredName;
-                    }
+                        hidePrompt();
+                        const newId = getNodeID(sourceNode.type);
+                        const newData = { ...sourceNode.data, id: newId };
+                        
+                        if (sourceNode.type === 'customInput') {
+                            newData.inputName = enteredName;
+                        } else if (sourceNode.type === 'customOutput') {
+                            newData.outputName = enteredName;
+                        } else {
+                            newData.title = enteredName;
+                        }
 
-                    const pastedNode = {
-                        id: newId,
-                        type: sourceNode.type,
-                        position: {
-                            x: sourceNode.position.x + 40,
-                            y: sourceNode.position.y + 40,
-                        },
-                        data: newData,
+                        const pastedNode = {
+                            id: newId,
+                            type: sourceNode.type,
+                            position: {
+                                x: sourceNode.position.x + 40,
+                                y: sourceNode.position.y + 40,
+                            },
+                            data: newData,
+                        };
+
+                        addNode(pastedNode);
                     };
 
-                    addNode(pastedNode);
+                    showPrompt(
+                        "Paste Node",
+                        `Enter a unique name for the copied ${sourceNode.type} node:`,
+                        defaultCopyName,
+                        handlePasteConfirm
+                    );
                 }
             }
         };
@@ -257,7 +266,7 @@ export const PipelineUI = () => {
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
         };
-    }, [nodes, addNode, getNodeID]);
+    }, [nodes, addNode, getNodeID, showAlert, showPrompt, hidePrompt]);
 
     const onDragOver = useCallback((event) => {
         event.preventDefault();
@@ -285,9 +294,8 @@ export const PipelineUI = () => {
                     panOnDrag={[1, 2]}
                     selectionMode="partial"
                 >
-                    <Background color="#D9D3C5" gap={gridSize} size={1.2} />
+                    <Background color={gridColor} gap={gridSize} size={1.5} />
                     <Controls className="custom-flow-controls" />
-                    <MiniMap className="custom-flow-minimap" />
                 </ReactFlow>
             </div>
         </div>
