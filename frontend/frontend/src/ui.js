@@ -285,7 +285,7 @@ export const PipelineUI = () => {
                     panOnDrag={[1, 2]}
                     selectionMode="partial"
                 >
-                    <Background color="#2a354f" gap={gridSize} size={1.5} />
+                    <Background color="#D9D3C5" gap={gridSize} size={1.5} />
                     <Controls className="custom-flow-controls" />
                     <MiniMap className="custom-flow-minimap" />
                 </ReactFlow>

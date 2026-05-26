@@ -8,7 +8,7 @@ export const BaseNode = ({
   inputs = [],
   outputs = [],
   children,
-  themeColor = '#818cf8', // standard indigo accent
+  themeColor = '#5B4824', // standard gold accent default
   className = '',
   style = {},
 }) => {
@@ -22,8 +22,7 @@ export const BaseNode = ({
     <div
       className={`custom-flow-node ${className}`}
       style={{
-        border: `2px solid ${themeColor}`,
-        boxShadow: `0 0 15px ${themeColor}25`,
+        borderTop: `3px solid ${themeColor}`,
         ...style
       }}
     >
@@ -47,7 +46,6 @@ export const BaseNode = ({
               borderWidth: '2px',
               width: '10px',
               height: '10px',
-              boxShadow: `0 0 8px ${themeColor}`,
               transition: 'all 0.2s ease',
               ...spacingStyle,
               ...customStyle,
@@ -77,7 +75,6 @@ export const BaseNode = ({
               borderWidth: '2px',
               width: '10px',
               height: '10px',
-              boxShadow: `0 0 8px ${themeColor}`,
               transition: 'all 0.2s ease',
               ...spacingStyle,
               ...customStyle,
@@ -88,8 +85,8 @@ export const BaseNode = ({
       })}
 
       {/* Node Header */}
-      <div className="node-header" style={{ borderBottom: `1px solid ${themeColor}40` }}>
-        {icon && <span className="node-icon">{icon}</span>}
+      <div className="node-header" style={{ borderBottom: '1px solid var(--rule)' }}>
+        {icon && <span className="node-icon" style={{ color: themeColor }}>{icon}</span>}
         <span className="node-title">{title}</span>
       </div>
 
